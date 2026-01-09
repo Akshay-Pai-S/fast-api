@@ -2,6 +2,9 @@ from fastapi import FastAPI, Response, status, HTTPException
 # from fastapi.params import Body
 from pydantic import BaseModel
 # from random import randrange
+import psycopg
+from psycopg.rows import dict_row, namedtuple_row
+import time
 
 class Post(BaseModel):
     id : int
@@ -10,9 +13,18 @@ class Post(BaseModel):
     published : bool = False
     rating : int | None = None
 
-
 app=FastAPI()
 my_posts : list=[{"tiltle":"dummy line", "content":"Dummy","id" : 0},{"title" : "First post", "content":"hi", "id":1}]
+
+while True:
+    try:
+        con=psycopg.connect(host='localhost', dbname='fastapi', user='postgres' ,password='postgres', row_factory=dict_row)
+        cur=con.cursor()
+        print('DB connection success')
+        break
+    except Exception as error:
+        print(f'DB connection failed\nERROR : {error}')
+        time.sleep(3)
 
 def find_post(id:int):
     for i in my_posts:
@@ -25,7 +37,9 @@ def root():
 
 @app.get('/posts')
 def get_posts():
-    return {'Posts' : my_posts}
+    cur.execute("""select * from posts""")
+    posts=cur.fetchall()
+    return {'Posts' : posts}
 
 @app.post('/posts',status_code=status.HTTP_201_CREATED)
 def create_posts(payload : Post):
