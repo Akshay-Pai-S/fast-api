@@ -37,8 +37,7 @@ def root():
 
 @app.get('/posts')
 def get_posts():
-    cur.execute("""select * from posts""")
-    posts=cur.fetchall()
+    posts=cur.execute("""select * from posts""").fetchall()
     return {'Posts' : posts}
 
 @app.post('/posts',status_code=status.HTTP_201_CREATED)
