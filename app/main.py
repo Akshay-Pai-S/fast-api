@@ -26,9 +26,8 @@ while True:
         time.sleep(3)
 
 def find_post(id:int):
-    for i in my_posts:
-        if i["id"]==id:
-            return i
+    cur.execute("""select * from posts where id = %s""", (str(id),))
+    return cur.fetchone()
 
 @app.get('/')
 def root():
@@ -56,8 +55,6 @@ def get_post(id : int):
     post=find_post(id)
     if not post:
         raise HTTPException(status.HTTP_404_NOT_FOUND, f'id {id} not found')
-        # response.status_code=status.HTTP_404_NOT_FOUND
-        # return {"Error" : f"The post with id : {id} not found"}
     return {"post" : post}
 
 @app.delete('/posts/{id}',status_code=status.HTTP_204_NO_CONTENT)
