@@ -7,11 +7,10 @@ from psycopg.rows import dict_row, namedtuple_row
 import time
 
 class Post(BaseModel):
-    id : int
     title : str
     content : str
     published : bool = False
-    rating : int | None = None
+    #rating : int | None = None
 
 app=FastAPI()
 my_posts : list=[{"tiltle":"dummy line", "content":"Dummy","id" : 0},{"title" : "First post", "content":"hi", "id":1}]
@@ -42,9 +41,9 @@ def get_posts():
 
 @app.post('/posts',status_code=status.HTTP_201_CREATED)
 def create_posts(payload : Post):
-    # post['id']=randrange(1,100000)
-    post=payload.model_dump()
-    my_posts.append(post)
+    cur.execute("""insert into posts (title, content, published) values (%s, %s, %s) returning * """, (payload.title, payload.content, payload.published))
+    post=cur.fetchone()
+    con.commit()
     return { 'post' : post}
 
 @app.get('/posts/latest')
