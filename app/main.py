@@ -26,7 +26,7 @@ while True:
         time.sleep(3)
 
 def find_post(id:int):
-    cur.execute("""select * from posts where id = %s""", (str(id),))
+    cur.execute("""select * from posts where id = %s""", (id,))
     return cur.fetchone()
 
 @app.get('/')
@@ -59,17 +59,15 @@ def get_post(id : int):
 
 @app.delete('/posts/{id}',status_code=status.HTTP_204_NO_CONTENT)
 def delete_post(id : int):
-    post=cur.execute("""delete from posts where id= %s returning *""",(str(id),)).fetchone()
+    post=cur.execute("""delete from posts where id= %s returning *""",(id,)).fetchone()
     if not post:
         raise HTTPException(status.HTTP_404_NOT_FOUND,f'id {id} not found')
     con.commit()
 
 @app.put('/posts/{id}')
-def update_post(id : int, post : Post):
-    p=find_post(id)
-    if not p:
+def update_post(id : int, payload : Post):
+    post=cur.execute("""update posts set title=%s , content= %s , published=%s where id=%s returning * """, (payload.title, payload.content, payload.published, id)).fetchall()
+    if not post:
         raise HTTPException(status.HTTP_404_NOT_FOUND,f'id {id} not found')
-    ind=my_posts.index(p)
-    post_dict=post.model_dump()
-    my_posts[ind]=post_dict
-    return {'updated' : post_dict}
+    con.commit()
+    return {'updated' : post}
