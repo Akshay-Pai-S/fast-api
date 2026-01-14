@@ -47,7 +47,7 @@ def create_posts(payload : Post):
 
 @app.get('/posts/latest')
 def get_latest():
-    post=my_posts[-1]
+    post=cur.execute("""select * from posts order by creation_time desc limit 1""").fetchone()
     return {"last post" : post}
 
 @app.get('/posts/{id}')
