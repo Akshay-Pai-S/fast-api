@@ -13,7 +13,6 @@ class Post(BaseModel):
     #rating : int | None = None
 
 app=FastAPI()
-my_posts : list=[{"tiltle":"dummy line", "content":"Dummy","id" : 0},{"title" : "First post", "content":"hi", "id":1}]
 
 while True:
     try:
@@ -26,7 +25,7 @@ while True:
         time.sleep(3)
 
 def find_post(id:int):
-    cur.execute("""select * from posts where id = %s""", (id,))
+    cur.execute(t'select * from posts where id = {id}')
     return cur.fetchone()
 
 @app.get('/')
@@ -35,19 +34,20 @@ def root():
 
 @app.get('/posts')
 def get_posts():
-    posts=cur.execute("""select * from posts""").fetchall()
+    posts=cur.execute(t'select * from posts').fetchall()
     return {'Posts' : posts}
 
 @app.post('/posts',status_code=status.HTTP_201_CREATED)
 def create_posts(payload : Post):
-    cur.execute("""insert into posts (title, content, published) values (%s, %s, %s) returning * """, (payload.title, payload.content, payload.published))
-    post=cur.fetchone()
+    post=cur.execute(
+        t'insert into posts (title, content, published) values ({payload.title}, {payload.content}, {payload.published}) returning *'
+        ).fetchone()
     con.commit()
     return { 'post' : post}
 
-@app.get('/posts/latest')
-def get_latest():
-    post=cur.execute("""select * from posts order by creation_time desc limit 1""").fetchone()
+@app.get('/posts/latest/{limit}')
+def get_latest(limit:int):
+    post=cur.execute(t'select * from posts order by creation_time desc limit {limit}').fetchall()
     return {"last post" : post}
 
 @app.get('/posts/{id}')
@@ -59,14 +59,16 @@ def get_post(id : int):
 
 @app.delete('/posts/{id}',status_code=status.HTTP_204_NO_CONTENT)
 def delete_post(id : int):
-    post=cur.execute("""delete from posts where id= %s returning *""",(id,)).fetchone()
+    post=cur.execute(t'delete from posts where id= {id} returning *').fetchone()
     if not post:
         raise HTTPException(status.HTTP_404_NOT_FOUND,f'id {id} not found')
     con.commit()
 
 @app.put('/posts/{id}')
 def update_post(id : int, payload : Post):
-    post=cur.execute("""update posts set title=%s , content= %s , published=%s where id=%s returning * """, (payload.title, payload.content, payload.published, id)).fetchall()
+    post=cur.execute(
+        t'update posts set title={payload.title} , content= {payload.content} , published={payload.published} where id={id} returning * '
+        ).fetchall()
     if not post:
         raise HTTPException(status.HTTP_404_NOT_FOUND,f'id {id} not found')
     con.commit()
