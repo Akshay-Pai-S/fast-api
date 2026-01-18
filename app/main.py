@@ -1,3 +1,4 @@
+from typing import List
 from fastapi import Depends, FastAPI, Response, status, HTTPException
 # from fastapi.params import Body
 from pydantic import BaseModel
@@ -6,19 +7,14 @@ import psycopg
 from psycopg.rows import dict_row, namedtuple_row
 import time
 
+from sqlalchemy import desc
+
 from app import models
 from .database import engine, get_db
 from sqlalchemy.orm import Session
-from . import models
+from . import models, schemas
 
 models.Base.metadata.create_all(bind=engine)
-
-
-class Post(BaseModel):
-    title : str
-    content : str
-    published : bool = False
-    #rating : int | None = None
 
 app=FastAPI()
 
@@ -36,23 +32,18 @@ def find_post(id:int):
     cur.execute(t'select * from posts where id = {id}')
     return cur.fetchone()
 
-@app.get('/sqlalchemytest')
-def test_posts(db: Session = Depends(get_db)):
-    posts=db.query(models.Post).all()
-    return {"data" : posts}
-
 @app.get('/')
 def root():
     return {'message':'Hello welcome hi sap'}
 
-@app.get('/posts')
+@app.get('/posts', response_model=List[schemas.PostResponce])
 def get_posts(db: Session = Depends(get_db)):
     #posts=cur.execute(t'select * from posts').fetchall()
     posts=db.query(models.Post).all()
-    return {'Posts' : posts}
+    return posts
 
-@app.post('/posts',status_code=status.HTTP_201_CREATED)
-def create_posts(payload : Post, db: Session = Depends(get_db)):
+@app.post('/posts',status_code=status.HTTP_201_CREATED, response_model=schemas.PostResponce)
+def create_posts(payload : schemas.PostCreate, db: Session = Depends(get_db)):
     # post=cur.execute(
     #     t'insert into posts (title, content, published) values ({payload.title}, {payload.content}, {payload.published}) returning *'
     #     ).fetchone()
@@ -61,20 +52,21 @@ def create_posts(payload : Post, db: Session = Depends(get_db)):
     db.add(post)
     db.commit()
     db.refresh(post)
-    return { 'post' : post}
+    return post
 
-@app.get('/posts/latest/{limit}')
-def get_latest(limit:int):
-    post=cur.execute(t'select * from posts order by creation_time desc limit {limit}').fetchall()
-    return {"last post" : post}
+@app.get('/posts/latest/{limit}', response_model=List[schemas.PostResponce])
+def get_latest(limit:int, db: Session = Depends(get_db)):
+    # post=cur.execute(t'select * from posts order by creation_time desc limit {limit}').fetchall()
+    post=db.query(models.Post).order_by(desc(models.Post.created_at)).limit(limit).all()
+    return post
 
-@app.get('/posts/{id}')
-def get_post(id : int,db: Session = Depends(get_db)):
+@app.get('/posts/{id}', response_model=schemas.PostResponce)
+def get_post(id : int, db: Session = Depends(get_db)):
     # post=find_post(id)
     post=db.query(models.Post).filter(models.Post.id==id).first()
     if not post:
         raise HTTPException(status.HTTP_404_NOT_FOUND, f'id {id} not found')
-    return {"post" : post}
+    return post
 
 @app.delete('/posts/{id}',status_code=status.HTTP_204_NO_CONTENT)
 def delete_post(id : int, db: Session = Depends(get_db)):
@@ -86,8 +78,8 @@ def delete_post(id : int, db: Session = Depends(get_db)):
     post.delete(synchronize_session=False)
     db.commit()
 
-@app.put('/posts/{id}')
-def update_post(id : int, payload : Post, db: Session = Depends(get_db)):
+@app.put('/posts/{id}', response_model=schemas.PostResponce)
+def update_post(id : int, payload : schemas.PostCreate, db: Session = Depends(get_db)):
     # post=cur.execute(
     #     t'update posts set title={payload.title} , content= {payload.content} , published={payload.published} where id={id} returning * '
     #     ).fetchall()
@@ -99,4 +91,4 @@ def update_post(id : int, payload : Post, db: Session = Depends(get_db)):
     post_query.update(payload.model_dump(), synchronize_session=False)
     db.commit()
     post=post_query.first()
-    return {'updated' : post}
+    return post
