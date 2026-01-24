@@ -7,7 +7,7 @@ import psycopg
 from psycopg.rows import dict_row, namedtuple_row
 import time
 
-from sqlalchemy import desc
+from sqlalchemy import select, desc
 
 from app import models
 from .database import engine, get_db
@@ -38,16 +38,12 @@ def root():
 
 @app.get('/posts', response_model=List[schemas.PostResponce])
 def get_posts(db: Session = Depends(get_db)):
-    #posts=cur.execute(t'select * from posts').fetchall()
-    posts=db.query(models.Post).all()
+    stmt=select(models.Post)
+    posts=db.execute(stmt).scalars().all()
     return posts
 
 @app.post('/posts',status_code=status.HTTP_201_CREATED, response_model=schemas.PostResponce)
 def create_posts(payload : schemas.PostCreate, db: Session = Depends(get_db)):
-    # post=cur.execute(
-    #     t'insert into posts (title, content, published) values ({payload.title}, {payload.content}, {payload.published}) returning *'
-    #     ).fetchone()
-    # con.commit()
     post=models.Post(**payload.model_dump())
     db.add(post)
     db.commit()
@@ -56,39 +52,33 @@ def create_posts(payload : schemas.PostCreate, db: Session = Depends(get_db)):
 
 @app.get('/posts/latest/{limit}', response_model=List[schemas.PostResponce])
 def get_latest(limit:int, db: Session = Depends(get_db)):
-    # post=cur.execute(t'select * from posts order by creation_time desc limit {limit}').fetchall()
-    post=db.query(models.Post).order_by(desc(models.Post.created_at)).limit(limit).all()
-    return post
+    stmt=select(models.Post).order_by(models.Post.created_at.desc()).limit(limit)
+    posts=db.execute(stmt).scalars().all()
+    return posts
 
 @app.get('/posts/{id}', response_model=schemas.PostResponce)
 def get_post(id : int, db: Session = Depends(get_db)):
-    # post=find_post(id)
-    post=db.query(models.Post).filter(models.Post.id==id).first()
+    stmt=select(models.Post).where(models.Post.id==id)
+    post=db.execute(stmt).scalar_one_or_none()
     if not post:
         raise HTTPException(status.HTTP_404_NOT_FOUND, f'id {id} not found')
     return post
 
 @app.delete('/posts/{id}',status_code=status.HTTP_204_NO_CONTENT)
 def delete_post(id : int, db: Session = Depends(get_db)):
-    # post=cur.execute(t'delete from posts where id= {id} returning *').fetchone()
-    # con.commit()
-    post=db.query(models.Post).filter(models.Post.id == id)
-    if not post.first():
+    post=db.get(models.Post, id)
+    if not post:
         raise HTTPException(status.HTTP_404_NOT_FOUND,f'id {id} not found')
-    post.delete(synchronize_session=False)
+    db.delete(post)
     db.commit()
 
 @app.put('/posts/{id}', response_model=schemas.PostResponce)
 def update_post(id : int, payload : schemas.PostCreate, db: Session = Depends(get_db)):
-    # post=cur.execute(
-    #     t'update posts set title={payload.title} , content= {payload.content} , published={payload.published} where id={id} returning * '
-    #     ).fetchall()
-    # con.commit()
-    post_query=db.query(models.Post).filter(models.Post.id == id)
-    post=post_query.first()
+    post=db.get(models.Post,id)
     if not post:
         raise HTTPException(status.HTTP_404_NOT_FOUND,f'id {id} not found')
-    post_query.update(payload.model_dump(), synchronize_session=False)
+    for k,v in payload.model_dump().items():
+        setattr(post,k,v)
     db.commit()
-    post=post_query.first()
+    db.refresh(post)
     return post
