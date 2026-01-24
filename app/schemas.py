@@ -13,3 +13,6 @@ class PostCreate(PostBase):
 class PostResponce(PostBase):
     id: int
     created_at: datetime
+    
+    class Config:
+        from_attributes = True
