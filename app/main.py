@@ -12,7 +12,7 @@ from sqlalchemy import select, desc
 from app import models
 from .database import engine, get_db
 from sqlalchemy.orm import Session
-from . import models, schemas
+from . import models, schemas, utils
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -82,3 +82,20 @@ def update_post(id : int, payload : schemas.PostCreate, db: Session = Depends(ge
     db.commit()
     db.refresh(post)
     return post
+
+@app.post('/users', status_code=status.HTTP_201_CREATED, response_model=schemas.UserResponce)
+def create_user(payload : schemas.UserCreate, db: Session = Depends(get_db)):
+    hashed_pswd=utils.hash(payload.password)
+    payload.password=hashed_pswd
+    user=models.User(**payload.model_dump())
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return user
+
+@app.get('/users', response_model=List[schemas.UserResponce])
+def get_users(db: Session = Depends(get_db)):
+    stmt=select(models.User)
+    result=db.execute(stmt)
+    users=result.scalars().all()
+    return users
