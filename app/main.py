@@ -99,3 +99,10 @@ def get_users(db: Session = Depends(get_db)):
     result=db.execute(stmt)
     users=result.scalars().all()
     return users
+
+@app.get('/users/{id}', response_model=schemas.UserResponce)
+def get_user(id: int, db: Session = Depends(get_db)):
+    user=db.get(models.User, id)
+    if not user:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f"User with id: {id} is not found")
+    return user
