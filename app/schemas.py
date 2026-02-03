@@ -26,3 +26,14 @@ class UserResponce(BaseModel):
     created_at: datetime
 
     model_config= ConfigDict(from_attributes=True)
+
+class UserLogin(BaseModel):
+    email: EmailStr
+    password: str
+
+class Token(BaseModel):
+    token: str
+    token_type: str
+
+class TokenData(BaseModel):
+    id: int | None = None
