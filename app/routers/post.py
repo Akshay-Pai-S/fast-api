@@ -19,10 +19,26 @@ def get_posts(db: Session = Depends(get_db), current_user = Depends(oauth2.get_c
 
 @router.post('/',status_code=status.HTTP_201_CREATED, response_model=schemas.PostResponce)
 def create_posts(payload : schemas.PostCreate, db: Session = Depends(get_db), current_user = Depends(oauth2.get_current_user)):
-    post=models.Post(**payload.model_dump())
+    post=models.Post(owner_id = current_user.id, **payload.model_dump())
     db.add(post)
     db.commit()
     db.refresh(post)
+    return post
+
+@router.get('/myposts/', response_model=List[schemas.PostResponce])
+def get_my_posts(db: Session = Depends(get_db), current_user = Depends(oauth2.get_current_user)):
+    stmt=select(models.Post).where(models.Post.owner_id==current_user.id)
+    posts=db.execute(stmt).scalars().all()
+    return posts
+
+@router.get('/myposts/{id}', response_model=schemas.PostResponce)
+def get_post(id : int, db: Session = Depends(get_db), current_user = Depends(oauth2.get_current_user)):
+    stmt=select(models.Post).where(models.Post.id==id)
+    post=db.execute(stmt).scalar_one_or_none()
+    if not post:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, f'id {id} not found')
+    if post.owner_id != current_user.id:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, f'Not Authorised to perform requested action in {id}')
     return post
 
 @router.get('/latest/{limit}', response_model=List[schemas.PostResponce])
@@ -44,6 +60,8 @@ def delete_post(id : int, db: Session = Depends(get_db), current_user = Depends(
     post=db.get(models.Post, id)
     if not post:
         raise HTTPException(status.HTTP_404_NOT_FOUND,f'id {id} not found')
+    if post.owner_id != current_user.id:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, f'Not Authorised to perform requested action in {id}')
     db.delete(post)
     db.commit()
 
@@ -52,6 +70,10 @@ def update_post(id : int, payload : schemas.PostCreate, db: Session = Depends(ge
     post=db.get(models.Post,id)
     if not post:
         raise HTTPException(status.HTTP_404_NOT_FOUND,f'id {id} not found')
+    
+    if post.owner_id != current_user.id:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, f'Not Authorised to perform requested action in {id}')
+    
     for k,v in payload.model_dump().items():
         setattr(post,k,v)
     db.commit()
