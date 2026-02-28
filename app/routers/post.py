@@ -41,9 +41,9 @@ def get_post(id : int, db: Session = Depends(get_db), current_user = Depends(oau
         raise HTTPException(status.HTTP_403_FORBIDDEN, f'Not Authorised to perform requested action in {id}')
     return post
 
-@router.get('/latest/{limit}', response_model=List[schemas.PostResponce])
-def get_latest(limit:int, db: Session = Depends(get_db), current_user = Depends(oauth2.get_current_user)):
-    stmt=select(models.Post).order_by(models.Post.created_at.desc()).limit(limit)
+@router.get('/latest', response_model=List[schemas.PostResponce])
+def get_latest(db: Session = Depends(get_db), current_user = Depends(oauth2.get_current_user), limit: int = 10, skip: int = 0, search: str =''):
+    stmt=select(models.Post).order_by(models.Post.created_at.desc()).limit(limit).offset(skip).filter(models.Post.title.contains(search))
     posts=db.execute(stmt).scalars().all()
     return posts
 
