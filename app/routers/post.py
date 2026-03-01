@@ -43,7 +43,7 @@ def get_post(id : int, db: Session = Depends(get_db), current_user = Depends(oau
 
 @router.get('/latest', response_model=List[schemas.PostResponce])
 def get_latest(db: Session = Depends(get_db), current_user = Depends(oauth2.get_current_user), limit: int = 10, skip: int = 0, search: str =''):
-    stmt=select(models.Post).order_by(models.Post.created_at.desc()).limit(limit).offset(skip).filter(models.Post.title.contains(search))
+    stmt=select(models.Post).order_by(models.Post.created_at.desc()).limit(limit).offset(skip).filter(models.Post.title.ilike(f"%{search}%"))
     posts=db.execute(stmt).scalars().all()
     return posts
 
