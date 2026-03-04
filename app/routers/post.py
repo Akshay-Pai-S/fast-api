@@ -1,5 +1,5 @@
 from fastapi import Depends, status, HTTPException, APIRouter
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.orm import Session
 from typing import List
 
@@ -11,10 +11,14 @@ router=APIRouter(
     tags=['Posts']
 )
 
-@router.get('/', response_model=List[schemas.PostResponce])
+@router.get('/', response_model=List[schemas.PostWithVotes])
 def get_posts(db: Session = Depends(get_db), current_user = Depends(oauth2.get_current_user)):
-    stmt=select(models.Post)
-    posts=db.execute(stmt).scalars().all()
+    stmt=(
+        select(models.Post, func.count(models.Vote.post_id).label('votes'))
+        .join(models.Vote, models.Post.id==models.Vote.post_id, isouter=True)
+        .group_by(models.Post.id)
+    )
+    posts=db.execute(stmt).all()
     return posts
 
 @router.post('/',status_code=status.HTTP_201_CREATED, response_model=schemas.PostResponce)
@@ -25,32 +29,55 @@ def create_posts(payload : schemas.PostCreate, db: Session = Depends(get_db), cu
     db.refresh(post)
     return post
 
-@router.get('/myposts/', response_model=List[schemas.PostResponce])
+@router.get('/myposts/', response_model=List[schemas.PostWithVotes])
 def get_my_posts(db: Session = Depends(get_db), current_user = Depends(oauth2.get_current_user)):
-    stmt=select(models.Post).where(models.Post.owner_id==current_user.id)
-    posts=db.execute(stmt).scalars().all()
+    stmt=(
+        select(models.Post, func.count(models.Vote.post_id).label('votes'))
+        .join(models.Vote, models.Post.id==models.Vote.post_id, isouter=True)
+        .group_by(models.Post.id)
+        .where(models.Post.owner_id==current_user.id)
+    )
+    posts=db.execute(stmt).all()
     return posts
 
-@router.get('/myposts/{id}', response_model=schemas.PostResponce)
+@router.get('/myposts/{id}', response_model=schemas.PostWithVotes)
 def get_post(id : int, db: Session = Depends(get_db), current_user = Depends(oauth2.get_current_user)):
-    stmt=select(models.Post).where(models.Post.id==id)
-    post=db.execute(stmt).scalar_one_or_none()
+    stmt=(
+        select(models.Post, func.count(models.Vote.post_id).label('votes'))
+        .join(models.Vote, models.Post.id==models.Vote.post_id, isouter=True)
+        .group_by(models.Post.id)
+        .where(models.Post.id==id)
+    )
+    post=db.execute(stmt).one_or_none()
     if not post:
         raise HTTPException(status.HTTP_404_NOT_FOUND, f'id {id} not found')
-    if post.owner_id != current_user.id:
+    if post.Post.owner_id != current_user.id:
         raise HTTPException(status.HTTP_403_FORBIDDEN, f'Not Authorised to perform requested action in {id}')
     return post
 
-@router.get('/latest', response_model=List[schemas.PostResponce])
+@router.get('/latest', response_model=List[schemas.PostWithVotes])
 def get_latest(db: Session = Depends(get_db), current_user = Depends(oauth2.get_current_user), limit: int = 10, skip: int = 0, search: str =''):
-    stmt=select(models.Post).order_by(models.Post.created_at.desc()).limit(limit).offset(skip).filter(models.Post.title.ilike(f"%{search}%"))
-    posts=db.execute(stmt).scalars().all()
+    stmt=(
+        select(models.Post, func.count(models.Vote.post_id).label('votes'))
+        .join(models.Vote, models.Post.id==models.Vote.post_id, isouter=True)
+        .group_by(models.Post.id)
+        .order_by(models.Post.created_at.desc())
+        .limit(limit)
+        .offset(skip)
+        .filter(models.Post.title.ilike(f"%{search}%"))
+    )
+    posts=db.execute(stmt).all()
     return posts
 
-@router.get('/{id}', response_model=schemas.PostResponce)
+@router.get('/{id}', response_model=schemas.PostWithVotes)
 def get_post(id : int, db: Session = Depends(get_db), current_user = Depends(oauth2.get_current_user)):
-    stmt=select(models.Post).where(models.Post.id==id)
-    post=db.execute(stmt).scalar_one_or_none()
+    stmt=(
+        select(models.Post, func.count(models.Vote.post_id).label('votes'))
+        .join(models.Vote, models.Post.id==models.Vote.post_id, isouter=True)
+        .group_by(models.Post.id)
+        .where(models.Post.id==id)
+    )
+    post=db.execute(stmt).one_or_none()
     if not post:
         raise HTTPException(status.HTTP_404_NOT_FOUND, f'id {id} not found')
     return post
