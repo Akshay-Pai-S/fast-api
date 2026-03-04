@@ -1,5 +1,6 @@
 from datetime import datetime
-from pydantic import BaseModel, ConfigDict, EmailStr
+from typing import Annotated
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 class PostBase(BaseModel):
     title : str
@@ -15,6 +16,12 @@ class PostResponce(PostBase):
     created_at: datetime
     owner_id: int
     owner: UserResponce
+    
+    model_config= ConfigDict(from_attributes=True)
+
+class PostWithVotes(BaseModel):
+    Post: PostResponce
+    votes: int
     
     model_config= ConfigDict(from_attributes=True)
 
@@ -39,3 +46,7 @@ class Token(BaseModel):
 
 class TokenData(BaseModel):
     id: int | None = None
+
+class Vote(BaseModel):
+    post_id: int
+    dir: Annotated[int, Field(le=1)]
