@@ -1,11 +1,11 @@
 from datetime import datetime
 from typing import Annotated
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, StringConstraints
 
 class PostBase(BaseModel):
     title : str
     content : str
-    published : bool = False
+    published : bool = True
     #rating : int | None = None
 
 class PostCreate(PostBase):
@@ -28,10 +28,12 @@ class PostWithVotes(BaseModel):
 class UserCreate(BaseModel):
     email: EmailStr
     password: str
+    phone_number : Annotated[str, StringConstraints(pattern=r'^\+?[0-9]{10,15}$')]
 
 class UserResponce(BaseModel):
     id: int
     email : EmailStr
+    phone_number: str
     created_at: datetime
 
     model_config= ConfigDict(from_attributes=True)

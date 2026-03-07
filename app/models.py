@@ -67,6 +67,11 @@ class User(Base):
         server_default=text('now()')
     )
 
+    phone_number: Mapped[int] = mapped_column(
+        String,
+        nullable=False
+    )
+
 class Vote(Base):
     __tablename__='votes'
 
