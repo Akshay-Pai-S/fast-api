@@ -1,7 +1,8 @@
-from fastapi import Depends, FastAPI, Response, status, HTTPException, APIRouter
+from fastapi import Depends, status, HTTPException, APIRouter
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 from typing import List
+from sqlalchemy.exc import IntegrityError
 
 from ..database import get_db
 from .. import models, schemas, utils
@@ -17,7 +18,14 @@ def create_user(payload : schemas.UserCreate, db: Session = Depends(get_db)):
     payload.password=hashed_pswd
     user=models.User(**payload.model_dump())
     db.add(user)
-    db.commit()
+    try:
+        db.commit()
+    except IntegrityError:
+        db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Email already exists"
+        )
     db.refresh(user)
     return user
 
