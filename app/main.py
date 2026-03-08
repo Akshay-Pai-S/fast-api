@@ -1,9 +1,14 @@
 from fastapi import FastAPI
-from .database import engine
-from . import models
+from .config import settings
 from .routers import post, user, auth, vote
 
-app=FastAPI()
+app=FastAPI(
+    title="FastAPI Social API",
+    version="1.0.0",
+    description="API for users, posts, auth and votes.",
+    debug=settings.debug,
+)
+
 
 @app.get('/')
 def root():

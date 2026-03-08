@@ -5,7 +5,7 @@ from typing import List
 from sqlalchemy.exc import IntegrityError
 
 from ..database import get_db
-from .. import models, schemas, utils
+from .. import models, schemas, utils, oauth2
 
 router=APIRouter(
     prefix="/users",
@@ -29,15 +29,18 @@ def create_user(payload : schemas.UserCreate, db: Session = Depends(get_db)):
     db.refresh(user)
     return user
 
-@router.get('/', response_model=List[schemas.UserResponce])
-def get_users(db: Session = Depends(get_db)):
+#Future plan: To improve based on the roles
+@router.get('/', response_model=List[schemas.UserResponceAll])
+def get_users(db: Session = Depends(get_db), current_user = Depends(oauth2.get_current_user)):
     stmt=select(models.User)
     result=db.execute(stmt)
     users=result.scalars().all()
     return users
 
 @router.get('/{id}', response_model=schemas.UserResponce)
-def get_user(id: int, db: Session = Depends(get_db)):
+def get_user(id: int, db: Session = Depends(get_db), current_user = Depends(oauth2.get_current_user)):
+    if id != current_user.id:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, f'Not Authorised to perform requested action')
     user=db.get(models.User, id)
     if not user:
         raise HTTPException(status.HTTP_404_NOT_FOUND, f"User with id: {id} is not found")

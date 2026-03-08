@@ -7,11 +7,11 @@ from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from .config import settings
 
-SECRET_KEY = settings.secret_key
+SECRET_KEY = settings.secret_key.get_secret_value()
 ALGORITHM = settings.algorithm
 ACCESS_TOKEN_EXPIRE_MINUTES = settings.access_token_expire_minutes
 
-oauth2_scheme=OAuth2PasswordBearer(tokenUrl="login")
+oauth2_scheme=OAuth2PasswordBearer(tokenUrl="/login")
 
 def create_access_token(data: dict):
     to_encode=data.copy()
@@ -23,7 +23,7 @@ def create_access_token(data: dict):
 
 def verify_access_token(token : str, credentials_exception):
     try:
-        payload=jwt.decode(token, SECRET_KEY, ALGORITHM)
+        payload=jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         id: int = payload.get("user_id")
 
         if not id:
@@ -43,5 +43,7 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     token_data= verify_access_token(token, credential_exception)
 
     user= db.get(models.User, token_data.id)
+    if user is None:
+        raise credential_exception
 
     return user
