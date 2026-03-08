@@ -33,7 +33,7 @@ class Post(Base):
         server_default=text('now()')
     )
 
-    owner_id : Mapped[int] = mapped_column(
+    owner_id : Mapped[str] = mapped_column(
         Integer,
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False
@@ -54,6 +54,12 @@ class User(Base):
         String,
         nullable=False,
         unique=True
+    )
+
+    name: Mapped[str] = mapped_column(
+        String,
+        nullable=False,
+        server_default=text('Unknown')
     )
 
     password: Mapped[str] = mapped_column(

@@ -4,8 +4,7 @@ from .config import settings
 
 database_url=f'postgresql+psycopg://{settings.database_username}:{settings.database_password}@{settings.database_hostname}:{settings.database_port}/{settings.database_name}'
 
-engine = create_engine(database_url, echo=True)
-
+engine = create_engine(database_url, echo=settings.sql_echo)
 SessionLocal=sessionmaker(autoflush=False, autocommit=False, bind=engine, class_=Session)
 
 class Base(DeclarativeBase):
