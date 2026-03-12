@@ -1,6 +1,7 @@
 venv_fastapi/
 __pycache__/
 .env
+.env_prod
 *.pyc
 .idea/
 .vscode/

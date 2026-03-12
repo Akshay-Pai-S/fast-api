@@ -36,7 +36,7 @@ class PostResponse(PostBase):
     id: int
     created_at: datetime
     owner_id: int
-    owner: UserResponce
+    owner: UserResponceAll
     
     model_config= ConfigDict(from_attributes=True)
 
