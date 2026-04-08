@@ -1,0 +1,30 @@
+services:
+  api:
+    image: akshaypais/fastapi
+    depends_on:
+      - postgres
+    ports:
+      - 80:80
+    environment:
+      - DATABASE_HOSTNAME=${DATABASE_HOSTNAME}
+      - DATABASE_PORT=${DATABASE_PORT}
+      - DATABASE_PASSWORD=${DATABASE_PASSWORD}
+      - DATABASE_NAME=${DATABASE_NAME}
+      - DATABASE_USERNAME=${DATABASE_USERNAME}
+      - SECRET_KEY=${SECRET_KEY}
+      - ALGORITHM=${ALGORITHM}
+      - ACCESS_TOKEN_EXPIRE_MINUTES=${ACCESS_TOKEN_EXPIRE_MINUTES}
+      - ENVIRONMENT={ENVIRONMENT}
+      - DEBUG=${DEBUG}
+      - SQL_ECHO=${SQL_ECHO}
+
+  postgres:
+    image: postgres:18
+    environment:
+      - POSTGRES_PASSWORD=${DATABASE_PASSWORD}
+      - POSTGRES_DB=${DATABASE_NAME}
+    volumes:
+      - postgres-db-v18:/var/lib/postgresql
+
+volumes:
+  postgres-db-v18:
